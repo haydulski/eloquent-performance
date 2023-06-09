@@ -18,7 +18,6 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-
 Route::controller(UserController::class)->prefix('/users')->name('users.')->group( function(){
     Route::get('bad', 'bad')->name('bad');
     Route::get('better', 'better')->name('better');

@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Company;
 use App\Models\User;
-use Illuminate\Database\Query\Builder;
 use Illuminate\View\View;
 
 class UserController extends Controller
@@ -12,21 +11,7 @@ class UserController extends Controller
     public function bad(): View
     {
         $users = User::query()
-            ->where(function ($query) {
-                $texts = request('search');
-                collect(explode(' ', $texts))->filter()->each(function ($text) use ($query) {
-                    $search = "%$text%";
-                    $query->where(function ($query) use ($search) {
-                        $query->where('first_name', 'like', $search)
-                            ->orWhere('last_name', 'like', $search)
-                            ->orWhereHas('company', function ($query) use ($search) {
-                                $query->where('name', 'like', $search);
-                            });
-                    });
-
-                });
-            }
-            )
+            ->withBad(request('search'))
             ->paginate(50);
 
         return view('users-list', ['users' => $users]);
@@ -36,21 +21,7 @@ class UserController extends Controller
     {
         $users = User::query()
             ->with('company')
-            ->where(function ($query) {
-                $texts = request('search');
-                collect(explode(' ', $texts))->filter()->each(function ($text) use ($query) {
-                    $search = "$text%";
-                    $query->where(function ($query) use ($search) {
-                        $query->where('first_name', 'like', $search)
-                            ->orWhere('last_name', 'like', $search)
-                            ->orWhereIn('company_id', function ($query) use ($search) {
-                                $query->select('id')->from('companies')
-                                    ->where('name', 'like', $search);
-                            });
-                    });
-                });
-            }
-            )
+            ->withBetter(request('search'))
             ->paginate(50);
 
         return view('users-list', ['users' => $users]);
@@ -61,21 +32,7 @@ class UserController extends Controller
     {
         $users = User::query()
             ->with('company')
-            ->where(function ($query) {
-                $texts = request('search');
-                collect(explode(' ', $texts))->filter()->each(function ($text) use ($query) {
-                    $search = "$text%";
-                    $query->where(function ($query) use ($search) {
-                        $query->where('first_name', 'like', $search)
-                            ->orWhere('last_name', 'like', $search)
-                            ->orWhereIn('company_id', Company::query()
-                                ->where('name', 'like', $search)
-                                ->pluck('id')
-                            );
-                    });
-                });
-            }
-            )
+            ->withGood(request('search'))
             ->paginate(50);
 
         return view('users-list', ['users' => $users]);
@@ -86,26 +43,7 @@ class UserController extends Controller
         $users = User::query()
             ->select('id', 'first_name', 'last_name', 'company_id')
             ->with('company:id,name')
-            ->where(function ($query) {
-                $texts = request('search');
-                collect(explode(' ', $texts))->filter()->each(function ($text) use ($query) {
-                    $search = "$text%";
-                    $query->whereIn('id', function ($query) use ($search) {
-                        $query->select('id')->from(function ($query) use ($search) {
-                            $query->select('id')
-                                ->from('users')
-                                ->where('first_name', 'like', $search)
-                                ->orWhere('last_name', 'like', $search)
-                                ->union($query->newQuery()
-                                    ->select('users.id')
-                                    ->from('users')
-                                    ->join('companies', 'users.company_id', '=', 'companies.id')
-                                    ->where('companies.name', 'like', $search));
-                        }, 'matches');
-                    });
-                });
-            }
-            )
+            ->withBest(request('search'))
             ->paginate(50);
 
         return view('users-list', ['users' => $users]);
